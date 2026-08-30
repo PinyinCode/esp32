@@ -122,6 +122,7 @@
             font-size: 12px;
             color: var(--text-secondary);
             margin-top: 6px;
+            width: 100%;
         }
 
         /* Nút bấm phong cách iOS */
@@ -206,7 +207,7 @@
         <div class="ios-segment">
             <label>
                 <input type="radio" name="sourceMode" value="server" checked>
-                <span>Server (xiaozhi.bin)</span>
+                <span>Server (merged.bin)</span>
             </label>
             <label>
                 <input type="radio" name="sourceMode" value="local">
@@ -242,6 +243,7 @@
         let port;
         let activeFirmwareBlob = null;
         let activeFileName = "";
+        let flashAddress = 0x0; // Mặc định từ server là merged-binary nạp từ 0x0
         
         const modeRadios = document.getElementsByName('sourceMode');
         const serverFileInfo = document.getElementById('serverFileInfo');
@@ -268,12 +270,13 @@
                 
                 activeFirmwareBlob = await response.blob();
                 activeFileName = "merged-binary.bin";
+                flashAddress = 0x0; // File gộp nạp từ 0x0
                 
                 const bytes = activeFirmwareBlob.size;
                 const sizeStr = bytes < 1024 * 1024 ? (bytes / 1024).toFixed(1) + " KB" : (bytes / (1024 * 1024)).toFixed(2) + " MB";
 
                 serverStatusText.innerText = `${activeFileName} (${sizeStr})`;
-                log("✓ Đã tải cấu hình từ server thành công.");
+                log("✓ Đã tải file từ server thành công (Nạp từ địa chỉ 0x0).");
                 checkReadyToFlash();
             } catch (e) {
                 serverStatusText.innerText = "Lỗi kết nối server";
@@ -289,8 +292,8 @@
                     loadServerFirmware();
                 } else {
                     serverFileInfo.style.display = 'none';
-                    serverFileInfo.style.display = 'none';
                     localFileInfo.style.display = 'block';
+                    flashAddress = 0x10000; // File local (xiaozhi.bin) nạp từ 0x10000
                     if (localFilePicker.files.length > 0) {
                         activeFirmwareBlob = localFilePicker.files[0];
                         activeFileName = activeFirmwareBlob.name;
@@ -307,7 +310,8 @@
             if (file) {
                 activeFirmwareBlob = file;
                 activeFileName = file.name;
-                log(`✓ Đã chọn tệp: ${file.name}`);
+                flashAddress = 0x10000; // File app chọn thủ công thường là xiaozhi.bin
+                log(`✓ Đã chọn tệp: ${file.name} (Nạp từ địa chỉ 0x10000)`);
                 checkReadyToFlash();
             }
         };
@@ -346,7 +350,7 @@
             connectBtn.disabled = true;
             progressContainer.style.display = "block";
             progressBar.style.width = "0%";
-            log(`⚡ Đang nạp: ${activeFileName}...`);
+            log(`⚡ Đang nạp ${activeFileName} tại địa chỉ 0x${flashAddress.toString(16)}...`);
 
             try {
                 const transport = new Transport(port);
@@ -365,7 +369,7 @@
                 log("Xác thực chip thành công.");
 
                 const arrayBuffer = await activeFirmwareBlob.arrayBuffer();
-                const fileArray = [{ data: new Uint8Array(arrayBuffer), address: 0x10000 }];
+                const fileArray = [{ data: new Uint8Array(arrayBuffer), address: flashAddress }];
 
                 log("Đang ghi dữ liệu Flash...");
                 await esploader.writeFlash({
