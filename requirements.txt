@@ -1,4 +1,7 @@
-flask
-gunicorn
+Flask
+pymongo
+requests
 certifi
+gunicorn
+
 
