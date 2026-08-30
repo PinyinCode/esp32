@@ -4,30 +4,27 @@ from flask import Flask, jsonify, request, send_from_directory
 app = Flask(__name__)
 
 
-# Trang chủ (khi truy cập https://esp32-428i.onrender.com/)
+# Trang chủ: Phục vụ giao diện web nạp code (index.html)
 @app.route("/")
 def home():
-  return "Xiaozhi OTA Update Server is Running!"
+  if os.path.exists("index.html"):
+    return send_from_directory(".", "index.html")
+  return "OTA Server is running, but index.html is missing!"
 
 
-# API kiểm tra cập nhật mà ESP32 đang gọi tới
+# API kiểm tra cập nhật OTA cho ESP32
 @app.route("/api/check-update", methods=["GET"])
 def check_update():
-  mac = request.args.get("mac", "unknown")
-  print(f"Thiết bị có MAC: {mac} đang kiểm tra cập nhật OTA...")
-
-  # Đường dẫn trực tiếp để ESP32 tải file .bin (chính là endpoint download bên dưới)
-  firmware_url = "https://esp32-ota-server-9yuy.onrender.com/download-firmware"
-
-  # Trả về JSON thông báo có bản cập nhật mới
-  return jsonify({"update_available": True, "firmware_url": firmware_url})
+  print(f"Thiết bị MAC {request.args.get('mac', 'unknown')} đang kiểm tra OTA...")
+  return jsonify({
+      "update_available": True,
+      "firmware_url": f"{request.host_url.rstrip('/')}/download-firmware",
+  })
 
 
-# API phục vụ việc tải file .bin về thiết bị
+# API cung cấp file .bin cho cả web nạp (trình duyệt tải) và ESP32 (OTA)
 @app.route("/download-firmware", methods=["GET"])
 def download_firmware():
-  # Đảm bảo file .bin của bạn trên GitHub đặt tên là xiaozhi.bin
-  # (hoặc sửa lại tên file bên dưới cho khớp với tên file .bin bạn đã tải lên)
   return send_from_directory(".", "xiaozhi.bin", as_attachment=True)
 
 
