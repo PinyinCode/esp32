@@ -1,7 +1,4 @@
 Flask
-pymongo
-requests
-certifi
 gunicorn
 
 
