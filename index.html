@@ -267,7 +267,7 @@
                 if (!response.ok) throw new Error("Không thấy file trên server!");
                 
                 activeFirmwareBlob = await response.blob();
-                activeFileName = "xiaozhi.bin";
+                activeFileName = "merged-binary.bin";
                 
                 const bytes = activeFirmwareBlob.size;
                 const sizeStr = bytes < 1024 * 1024 ? (bytes / 1024).toFixed(1) + " KB" : (bytes / (1024 * 1024)).toFixed(2) + " MB";
