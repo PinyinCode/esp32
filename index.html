@@ -25,7 +25,7 @@
         <h2>⚡ ESP32 Web Flasher</h2>
         <p>Cắm cáp USB và thực hiện theo thứ tự:</p>
         
-        <!-- Thông tin file firmware sẽ hiện ở đây -->
+        <!-- Khung hiển thị thông tin file firmware lấy từ server -->
         <div class="info-box" id="fileInfo">
             <p>📂 <b>Tên file:</b> Đang tải thông tin...</p>
             <p>📦 <b>Dung lượng:</b> Đang tính toán...</p>
@@ -47,7 +47,7 @@
         let port;
         let firmwareBlob = null;
         let firmwareSizeStr = "";
-        const fileName = "xiaozhi.bin"; // Tên file cố định trên server
+        const fileName = "xiaozhi.bin";
 
         const connectBtn = document.getElementById('connectBtn');
         const flashBtn = document.getElementById('flashBtn');
@@ -61,17 +61,16 @@
             logEl.scrollTop = logEl.scrollHeight;
         }
 
-        // Tự động lấy thông tin dung lượng file từ server ngay khi mở trang web
+        // Tự động quét thông tin file từ server ngay khi mở trang
         async function fetchFirmwareInfo() {
             try {
                 log("Đang kiểm tra file firmware trên server...");
                 const response = await fetch('/download-firmware');
-                if (!response.ok) throw new Error("Không kết nối được với file trên server!");
+                if (!response.ok) throw new Error("Không tìm thấy file xiaozhi.bin trên server!");
                 
                 firmwareBlob = await response.blob();
                 const bytes = firmwareBlob.size;
                 
-                // Quy đổi dung lượng sang KB hoặc MB cho dễ đọc
                 if (bytes < 1024 * 1024) {
                     firmwareSizeStr = (bytes / 1024).toFixed(2) + " KB";
                 } else {
@@ -82,34 +81,35 @@
                     <p>📂 <b>Tên file:</b> ${fileName}</p>
                     <p>📦 <b>Dung lượng:</b> ${firmwareSizeStr} (${bytes} bytes)</p>
                 `;
-                log("✅ Đã tải thông tin file thành công.");
+                log("✅ Đã nhận thông tin file firmware thành công.");
             } catch (e) {
-                fileInfoEl.innerHTML = `<p style="color:red;">❌ Không thể tải thông tin file từ server!</p>`;
+                fileInfoEl.innerHTML = `<p style="color:red;">❌ Lỗi: Không tải được thông tin file!</p>`;
                 log("Lỗi: " + e.message);
             }
         }
 
-        // Chạy ngay khi load trang
         fetchFirmwareInfo();
 
-        // Bước 1: Người dùng bấm nút kết nối USB
+        // Danh sách Vendor ID phổ biến của chip ESP32 để lọc sẵn cổng USB chính xác
+        const ESP_VEN_IDS = [0x10C4, 0x1A86, 0x303A];
+
         connectBtn.onclick = async () => {
             try {
-                port = await navigator.serial.requestPort();
-                log("Đã chọn cổng USB thành công. Sẵn sàng nạp!");
+                const filters = ESP_VEN_IDS.map(usbVendorId => ({ usbVendorId }));
+                port = await navigator.serial.requestPort({ filters });
+                
+                log("Đã chọn cổng USB thành công!");
                 connectBtn.innerText = "Đã kết nối USB ✅";
                 connectBtn.style.background = "#6c757d";
                 
-                // Chỉ mở khóa nút nạp khi đã kết nối thành công và đã tải xong file
                 if (firmwareBlob) {
                     flashBtn.disabled = false;
                 }
             } catch (e) {
-                log("⚠️ Bạn chưa chọn cổng USB hoặc đã hủy.");
+                log("⚠️ Bạn đã hủy hoặc không chọn cổng USB.");
             }
         };
 
-        // Bước 2: Người dùng chủ động bấm nút "Bắt đầu Nạp Firmware"
         flashBtn.onclick = async () => {
             if (!port || !firmwareBlob) return;
 
@@ -131,11 +131,10 @@
                     }
                 });
 
-                log("🔄 Đang thiết lập giao tiếp với chip ESP32...");
+                log("🔄 Đang kết nối với chip ESP32...");
                 await esploader.main();
-                log("✅ Chip đã phản hồi!");
+                log("✅ Đã bắt tay thành công với chip!");
 
-                // Đọc dữ liệu từ blob đã tải sẵn
                 const arrayBuffer = await firmwareBlob.arrayBuffer();
                 const fileArray = [{ data: new Uint8Array(arrayBuffer), address: 0x10000 }];
 
@@ -153,10 +152,10 @@
 
                 log("🎉 NẠP THÀNH CÔNG! Đang khởi động lại thiết bị...");
                 await esploader.hardReset();
-                log("✨ Hoàn tất! Bạn có thể rút cáp.");
+                log("✨ Hoàn tất! Thiết bị đang chạy chương trình mới.");
 
             } catch (e) {
-                log("❌ LỖI TRONG QUÁ TRÌNH NẠP: " + e.message);
+                log("❌ LỖI: " + e.message);
                 flashBtn.disabled = false;
             }
         };
