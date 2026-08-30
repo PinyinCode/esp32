@@ -50,7 +50,27 @@
             text-align: center;
             color: var(--text-secondary);
             font-size: 14px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
+        }
+
+        /* Khung hiển thị ảnh minh hoạ */
+        .image-preview-container {
+            width: 100%;
+            height: 160px;
+            background-color: #fafafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-preview-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Đảm bảo ảnh phủ kín khung mà không bị méo */
         }
 
         /* Segmented Control kiểu iOS cho phần chọn nguồn file */
@@ -221,6 +241,12 @@
         <h2>ESP32 Flasher</h2>
         <p class="subtitle">Cập nhật và nạp firmware trực tiếp</p>
         
+        <!-- Ô hiển thị ảnh minh hoạ (Thay đổi đường dẫn src ở đây để đổi ảnh) -->
+        <div class="image-preview-container">
+            <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80" alt="Thiết bị phần cứng minh hoạ" id="previewImg">
+        </div>
+
+        <!-- Bộ chọn nguồn file kiểu Segmented Control -->
         <div class="ios-segment">
             <label>
                 <input type="radio" name="sourceMode" value="server" checked>
@@ -232,6 +258,7 @@
             </label>
         </div>
 
+        <!-- Khung thông tin file -->
         <div class="info-container">
             <div id="serverFileInfo">
                 <div class="info-row">
@@ -262,7 +289,7 @@
         let port;
         let activeFirmwareBlob = null;
         let activeFileName = "";
-        let flashAddress = 0x0; // Mặc định từ server là merged-binary nạp từ 0x0
+        let flashAddress = 0x0;
         
         const modeRadios = document.getElementsByName('sourceMode');
         const serverFileInfo = document.getElementById('serverFileInfo');
@@ -287,13 +314,12 @@
                 serverStatusText.innerText = "Đang cập nhật lại...";
                 log("Đang đồng bộ file mới nhất từ server...");
                 
-                // Thêm timestamp (?t=...) để trình duyệt không dùng cache cũ
                 const response = await fetch('/download-firmware?t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Không thấy file trên server!");
                 
                 activeFirmwareBlob = await response.blob();
                 activeFileName = "merged-binary.bin";
-                flashAddress = 0x0; // File gộp nạp từ 0x0
+                flashAddress = 0x0;
                 
                 const bytes = activeFirmwareBlob.size;
                 const sizeStr = bytes < 1024 * 1024 ? (bytes / 1024).toFixed(1) + " KB" : (bytes / (1024 * 1024)).toFixed(2) + " MB";
@@ -307,7 +333,6 @@
             }
         }
 
-        // Gắn sự kiện cho nút Refresh
         refreshServerBtn.onclick = () => {
             loadServerFirmware();
         };
@@ -321,7 +346,7 @@
                 } else {
                     serverFileInfo.style.display = 'none';
                     localFileInfo.style.display = 'block';
-                    flashAddress = 0x10000; // File local (xiaozhi.bin) nạp từ 0x10000
+                    flashAddress = 0x10000;
                     if (localFilePicker.files.length > 0) {
                         activeFirmwareBlob = localFilePicker.files[0];
                         activeFileName = activeFirmwareBlob.name;
@@ -338,7 +363,7 @@
             if (file) {
                 activeFirmwareBlob = file;
                 activeFileName = file.name;
-                flashAddress = 0x10000; // File app chọn thủ công thường là xiaozhi.bin
+                flashAddress = 0x10000;
                 log(`✓ Đã chọn tệp: ${file.name} (Nạp từ địa chỉ 0x10000)`);
                 checkReadyToFlash();
             }
@@ -352,7 +377,6 @@
             }
         }
 
-        // Tải tự động lần đầu khi mở trang
         loadServerFirmware();
 
         const ESP_VEN_IDS = [0x10C4, 0x1A86, 0x303A];
