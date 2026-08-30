@@ -5,92 +5,323 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 Web Flasher & OTA</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 40px; background: #eceff1; }
-        .card { background: white; padding: 30px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 440px; }
-        .info-box { background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px; border-radius: 6px; margin: 15px 0; text-align: left; font-size: 14px; }
-        .info-box p { margin: 6px 0; color: #333; }
-        .btn-action { width: 100%; padding: 14px; font-size: 16px; margin: 10px 0; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.3s; }
-        .btn-connect { background: #007bff; color: white; }
-        .btn-connect:hover { background: #0056b3; }
-        .btn-flash { background: #28a745; color: white; }
-        .btn-flash:hover { background: #218838; }
-        .btn-action:disabled { background: #6c757d; cursor: not-allowed; }
-        .status-box { text-align: left; background: #1e1e1e; color: #00ff66; padding: 12px; border-radius: 6px; height: 180px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.4; margin-top: 15px; }
-        .progress-bar { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin: 10px 0; height: 10px; overflow: hidden; display: none; }
-        .progress-fill { height: 100%; background-color: #007bff; width: 0%; transition: width 0.2s; }
+        :root {
+            --bg-color: #f2f2f7;
+            --card-bg: #ffffff;
+            --text-primary: #1c1c1e;
+            --text-secondary: #8e8e93;
+            --accent-blue: #007aff;
+            --accent-green: #34c759;
+            --border-color: #e5e5ea;
+            --radius: 16px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .card {
+            background: var(--card-bg);
+            width: 420px;
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            box-sizing: border-box;
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        /* Segmented Control kiểu iOS cho phần chọn nguồn file */
+        .ios-segment {
+            display: flex;
+            background: #e3e3e8;
+            padding: 3px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .ios-segment label {
+            flex: 1;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+        }
+
+        .ios-segment input {
+            display: none;
+        }
+
+        .ios-segment input:checked + span {
+            background: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+            font-weight: 600;
+        }
+
+        .ios-segment span {
+            display: block;
+            width: 100%;
+            height: 100%;
+            line-height: 28px;
+            border-radius: 8px;
+        }
+
+        /* Khung thông tin file */
+        .info-container {
+            background: #fafafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* File input tuỳ chỉnh ẩn */
+        input[type="file"] {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* Nút bấm phong cách iOS */
+        .ios-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.1s ease, opacity 0.2s ease;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ios-btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-blue {
+            background-color: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-green {
+            background-color: var(--accent-green);
+            color: white;
+        }
+
+        .ios-btn:disabled {
+            background-color: #e5e5ea;
+            color: #aeaeb2;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Thanh tiến trình kiểu iOS */
+        .progress-container {
+            background-color: #e5e5ea;
+            border-radius: 6px;
+            height: 8px;
+            overflow: hidden;
+            margin: 16px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--accent-blue);
+            width: 0%;
+            transition: width 0.2s ease;
+            border-radius: 6px;
+        }
+
+        /* Hộp log trạng thái tối giản */
+        .terminal-box {
+            background: #1c1c1e;
+            color: #30d158;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            padding: 12px;
+            border-radius: 12px;
+            height: 140px;
+            overflow-y: auto;
+            line-height: 1.5;
+            margin-top: 10px;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h2>⚡ ESP32 Web Flasher</h2>
-        <p>Cắm cáp USB và thực hiện theo thứ tự:</p>
+        <h2>ESP32 Flasher</h2>
+        <p class="subtitle">Cập nhật và nạp firmware trực tiếp</p>
         
-        <!-- Khung hiển thị thông tin file firmware lấy từ server -->
-        <div class="info-box" id="fileInfo">
-            <p>📂 <b>Tên file:</b> Đang tải thông tin...</p>
-            <p>📦 <b>Dung lượng:</b> Đang tính toán...</p>
+        <!-- Bộ chọn nguồn file kiểu Segmented Control -->
+        <div class="ios-segment">
+            <label>
+                <input type="radio" name="sourceMode" value="server" checked>
+                <span>Server (xiaozhi.bin)</span>
+            </label>
+            <label>
+                <input type="radio" name="sourceMode" value="local">
+                <span>Chọn từ máy</span>
+            </label>
         </div>
 
-        <button id="connectBtn" class="btn-action btn-connect">🔌 1. Kết nối cổng USB</button>
-        <button id="flashBtn" class="btn-action btn-flash" disabled>🚀 2. Bắt đầu Nạp Firmware</button>
-        
-        <div id="progressBox" class="progress-bar">
-            <div id="progressFill" class="progress-fill"></div>
+        <!-- Khung hiển thị thông tin -->
+        <div class="info-container">
+            <div id="serverFileInfo">
+                <div class="info-row"><span class="info-label">Nguồn:</span> <span class="info-value">Render Cloud</span></div>
+                <div class="info-row"><span class="info-label">Trạng thái:</span> <span class="info-value" id="serverStatusText">Đang tải...</span></div>
+            </div>
+            <div id="localFileInfo" style="display: none;">
+                <div class="info-row"><span class="info-label">Tệp tin:</span></div>
+                <input type="file" id="localFilePicker" accept=".bin">
+            </div>
         </div>
 
-        <div id="log" class="status-box">Sẵn sàng! Hãy kết nối USB...</div>
+        <button id="connectBtn" class="ios-btn btn-blue">🔌 Kết nối USB</button>
+        <button id="flashBtn" class="ios-btn btn-green" disabled>🚀 Bắt đầu Nạp</button>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div id="log" class="terminal-box">Sẵn sàng thiết lập...</div>
     </div>
 
     <script type="module">
         import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.2/bundle.js";
 
         let port;
-        let firmwareBlob = null;
-        let firmwareSizeStr = "";
-        const fileName = "xiaozhi.bin";
-
+        let activeFirmwareBlob = null;
+        let activeFileName = "";
+        
+        const modeRadios = document.getElementsByName('sourceMode');
+        const serverFileInfo = document.getElementById('serverFileInfo');
+        const localFileInfo = document.getElementById('localFileInfo');
+        const serverStatusText = document.getElementById('serverStatusText');
+        const localFilePicker = document.getElementById('localFilePicker');
+        
         const connectBtn = document.getElementById('connectBtn');
         const flashBtn = document.getElementById('flashBtn');
-        const fileInfoEl = document.getElementById('fileInfo');
         const logEl = document.getElementById('log');
-        const progressBox = document.getElementById('progressBox');
-        const progressFill = document.getElementById('progressFill');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
 
         function log(text) {
             logEl.innerText += "\n" + text;
             logEl.scrollTop = logEl.scrollHeight;
         }
 
-        // Tự động quét thông tin file từ server ngay khi mở trang
-        async function fetchFirmwareInfo() {
+        async function loadServerFirmware() {
             try {
-                log("Đang kiểm tra file firmware trên server...");
+                serverStatusText.innerText = "Đang kết nối...";
                 const response = await fetch('/download-firmware');
-                if (!response.ok) throw new Error("Không tìm thấy file xiaozhi.bin trên server!");
+                if (!response.ok) throw new Error("Không thấy file trên server!");
                 
-                firmwareBlob = await response.blob();
-                const bytes = firmwareBlob.size;
+                activeFirmwareBlob = await response.blob();
+                activeFileName = "xiaozhi.bin";
                 
-                if (bytes < 1024 * 1024) {
-                    firmwareSizeStr = (bytes / 1024).toFixed(2) + " KB";
-                } else {
-                    firmwareSizeStr = (bytes / (1024 * 1024)).toFixed(2) + " MB";
-                }
+                const bytes = activeFirmwareBlob.size;
+                const sizeStr = bytes < 1024 * 1024 ? (bytes / 1024).toFixed(1) + " KB" : (bytes / (1024 * 1024)).toFixed(2) + " MB";
 
-                fileInfoEl.innerHTML = `
-                    <p>📂 <b>Tên file:</b> ${fileName}</p>
-                    <p>📦 <b>Dung lượng:</b> ${firmwareSizeStr} (${bytes} bytes)</p>
-                `;
-                log("✅ Đã nhận thông tin file firmware thành công.");
+                serverStatusText.innerText = `${activeFileName} (${sizeStr})`;
+                log("✓ Đã tải cấu hình từ server thành công.");
+                checkReadyToFlash();
             } catch (e) {
-                fileInfoEl.innerHTML = `<p style="color:red;">❌ Lỗi: Không tải được thông tin file!</p>`;
+                serverStatusText.innerText = "Lỗi kết nối server";
                 log("Lỗi: " + e.message);
             }
         }
 
-        fetchFirmwareInfo();
+        modeRadios.forEach(radio => {
+            radio.onchange = (e) => {
+                if (e.target.value === 'server') {
+                    serverFileInfo.style.display = 'block';
+                    localFileInfo.style.display = 'none';
+                    loadServerFirmware();
+                } else {
+                    serverFileInfo.style.display = 'none';
+                    serverFileInfo.style.display = 'none';
+                    localFileInfo.style.display = 'block';
+                    if (localFilePicker.files.length > 0) {
+                        activeFirmwareBlob = localFilePicker.files[0];
+                        activeFileName = activeFirmwareBlob.name;
+                    } else {
+                        activeFirmwareBlob = null;
+                    }
+                    checkReadyToFlash();
+                }
+            };
+        });
 
-        // Danh sách Vendor ID phổ biến của chip ESP32 để lọc sẵn cổng USB chính xác
+        localFilePicker.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                activeFirmwareBlob = file;
+                activeFileName = file.name;
+                log(`✓ Đã chọn tệp: ${file.name}`);
+                checkReadyToFlash();
+            }
+        };
+
+        function checkReadyToFlash() {
+            if (port && activeFirmwareBlob) {
+                flashBtn.disabled = false;
+            } else {
+                flashBtn.disabled = true;
+            }
+        }
+
+        loadServerFirmware();
+
         const ESP_VEN_IDS = [0x10C4, 0x1A86, 0x303A];
 
         connectBtn.onclick = async () => {
@@ -98,26 +329,24 @@
                 const filters = ESP_VEN_IDS.map(usbVendorId => ({ usbVendorId }));
                 port = await navigator.serial.requestPort({ filters });
                 
-                log("Đã chọn cổng USB thành công!");
-                connectBtn.innerText = "Đã kết nối USB ✅";
-                connectBtn.style.background = "#6c757d";
+                log("✓ Đã kết nối cổng Serial USB!");
+                connectBtn.innerText = "Đã kết nối USB ✓";
+                connectBtn.style.backgroundColor = "#8e8e93";
                 
-                if (firmwareBlob) {
-                    flashBtn.disabled = false;
-                }
+                checkReadyToFlash();
             } catch (e) {
-                log("⚠️ Bạn đã hủy hoặc không chọn cổng USB.");
+                log("⚠️ Chưa chọn thiết bị.");
             }
         };
 
         flashBtn.onclick = async () => {
-            if (!port || !firmwareBlob) return;
+            if (!port || !activeFirmwareBlob) return;
 
             flashBtn.disabled = true;
             connectBtn.disabled = true;
-            progressBox.style.display = "block";
-            progressFill.style.width = "0%";
-            log("⚡ Bắt đầu tiến trình nạp...");
+            progressContainer.style.display = "block";
+            progressBar.style.width = "0%";
+            log(`⚡ Đang nạp: ${activeFileName}...`);
 
             try {
                 const transport = new Transport(port);
@@ -131,14 +360,14 @@
                     }
                 });
 
-                log("🔄 Đang kết nối với chip ESP32...");
+                log("Đang giao tiếp phần cứng ESP32...");
                 await esploader.main();
-                log("✅ Đã bắt tay thành công với chip!");
+                log("Xác thực chip thành công.");
 
-                const arrayBuffer = await firmwareBlob.arrayBuffer();
+                const arrayBuffer = await activeFirmwareBlob.arrayBuffer();
                 const fileArray = [{ data: new Uint8Array(arrayBuffer), address: 0x10000 }];
 
-                log("🔥 Đang ghi dữ liệu vào Flash...");
+                log("Đang ghi dữ liệu Flash...");
                 await esploader.writeFlash({
                     fileArray: fileArray,
                     flashSize: "keep",
@@ -146,16 +375,16 @@
                     compress: true,
                     reportProgress: (fileIdx, written, total) => {
                         const percent = Math.round((written / total) * 100);
-                        progressFill.style.width = percent + "%";
+                        progressBar.style.width = percent + "%";
                     }
                 });
 
-                log("🎉 NẠP THÀNH CÔNG! Đang khởi động lại thiết bị...");
+                log("🎉 Nạp thành công! Đang khởi động lại...");
                 await esploader.hardReset();
-                log("✨ Hoàn tất! Thiết bị đang chạy chương trình mới.");
+                log("✨ Hoàn tất.");
 
             } catch (e) {
-                log("❌ LỖI: " + e.message);
+                log("❌ Lỗi: " + e.message);
                 flashBtn.disabled = false;
             }
         };
