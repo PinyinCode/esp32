@@ -17,7 +17,7 @@ def check_update():
   print(f"Thiết bị có MAC: {mac} đang kiểm tra cập nhật OTA...")
 
   # Đường dẫn trực tiếp để ESP32 tải file .bin (chính là endpoint download bên dưới)
-  firmware_url = "https://esp32-428i.onrender.com/download-firmware"
+  firmware_url = "https://esp32-ota-server-9yuy.onrender.com/download-firmware"
 
   # Trả về JSON thông báo có bản cập nhật mới
   return jsonify({"update_available": True, "firmware_url": firmware_url})
