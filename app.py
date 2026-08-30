@@ -1,4 +1,4 @@
-Kiểm tra mã sau xem import os
+import os
 from flask import Flask, jsonify, request, send_from_directory
 
 app = Flask(__name__)
