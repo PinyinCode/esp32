@@ -3,86 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 Web Flasher & OTA Server</title>
+    <title>ESP32 Web Flasher & OTA</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; }
-        button { width: 100%; padding: 12px; font-size: 16px; margin: 10px 0; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        button.flash { background: #28a745; }
-        pre { text-align: left; background: #1e1e1e; color: #00ff00; padding: 12px; border-radius: 5px; height: 180px; overflow-y: auto; font-size: 13px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 40px; background: #eceff1; }
+        .card { background: white; padding: 30px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 440px; }
+        .info-box { background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px; border-radius: 6px; margin: 15px 0; text-align: left; font-size: 14px; }
+        .info-box p { margin: 6px 0; color: #333; }
+        .btn-action { width: 100%; padding: 14px; font-size: 16px; margin: 10px 0; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; transition: 0.3s; }
+        .btn-connect { background: #007bff; color: white; }
+        .btn-connect:hover { background: #0056b3; }
+        .btn-flash { background: #28a745; color: white; }
+        .btn-flash:hover { background: #218838; }
+        .btn-action:disabled { background: #6c757d; cursor: not-allowed; }
+        .status-box { text-align: left; background: #1e1e1e; color: #00ff66; padding: 12px; border-radius: 6px; height: 180px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.4; margin-top: 15px; }
+        .progress-bar { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin: 10px 0; height: 10px; overflow: hidden; display: none; }
+        .progress-fill { height: 100%; background-color: #007bff; width: 0%; transition: width 0.2s; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>Nạp Firmware ESP32</h2>
-        <p>Cắm cáp USB và chọn kết nối:</p>
-        <button id="connectBtn">🔌 Kết nối cổng USB</button>
-        <button id="programBtn" class="flash" disabled>🚀 Nạp file xiaozhi.bin</button>
-        <br>
-        <pre id="log">Nhật ký trạng thái sẽ hiện ở đây...</pre>
+        <h2>⚡ ESP32 Web Flasher</h2>
+        <p>Cắm cáp USB và thực hiện theo thứ tự:</p>
+        
+        <!-- Thông tin file firmware sẽ hiện ở đây -->
+        <div class="info-box" id="fileInfo">
+            <p>📂 <b>Tên file:</b> Đang tải thông tin...</p>
+            <p>📦 <b>Dung lượng:</b> Đang tính toán...</p>
+        </div>
+
+        <button id="connectBtn" class="btn-action btn-connect">🔌 1. Kết nối cổng USB</button>
+        <button id="flashBtn" class="btn-action btn-flash" disabled>🚀 2. Bắt đầu Nạp Firmware</button>
+        
+        <div id="progressBox" class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+
+        <div id="log" class="status-box">Sẵn sàng! Hãy kết nối USB...</div>
     </div>
 
     <script type="module">
         import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.2/bundle.js";
 
         let port;
-        let transport;
-        let esploader;
+        let firmwareBlob = null;
+        let firmwareSizeStr = "";
+        const fileName = "xiaozhi.bin"; // Tên file cố định trên server
 
         const connectBtn = document.getElementById('connectBtn');
-        const programBtn = document.getElementById('programBtn');
+        const flashBtn = document.getElementById('flashBtn');
+        const fileInfoEl = document.getElementById('fileInfo');
         const logEl = document.getElementById('log');
+        const progressBox = document.getElementById('progressBox');
+        const progressFill = document.getElementById('progressFill');
 
         function log(text) {
-            logEl.innerText += text + "\n";
+            logEl.innerText += "\n" + text;
             logEl.scrollTop = logEl.scrollHeight;
         }
 
+        // Tự động lấy thông tin dung lượng file từ server ngay khi mở trang web
+        async function fetchFirmwareInfo() {
+            try {
+                log("Đang kiểm tra file firmware trên server...");
+                const response = await fetch('/download-firmware');
+                if (!response.ok) throw new Error("Không kết nối được với file trên server!");
+                
+                firmwareBlob = await response.blob();
+                const bytes = firmwareBlob.size;
+                
+                // Quy đổi dung lượng sang KB hoặc MB cho dễ đọc
+                if (bytes < 1024 * 1024) {
+                    firmwareSizeStr = (bytes / 1024).toFixed(2) + " KB";
+                } else {
+                    firmwareSizeStr = (bytes / (1024 * 1024)).toFixed(2) + " MB";
+                }
+
+                fileInfoEl.innerHTML = `
+                    <p>📂 <b>Tên file:</b> ${fileName}</p>
+                    <p>📦 <b>Dung lượng:</b> ${firmwareSizeStr} (${bytes} bytes)</p>
+                `;
+                log("✅ Đã tải thông tin file thành công.");
+            } catch (e) {
+                fileInfoEl.innerHTML = `<p style="color:red;">❌ Không thể tải thông tin file từ server!</p>`;
+                log("Lỗi: " + e.message);
+            }
+        }
+
+        // Chạy ngay khi load trang
+        fetchFirmwareInfo();
+
+        // Bước 1: Người dùng bấm nút kết nối USB
         connectBtn.onclick = async () => {
             try {
                 port = await navigator.serial.requestPort();
-                transport = new Transport(port);
-                esploader = new ESPLoader({
+                log("Đã chọn cổng USB thành công. Sẵn sàng nạp!");
+                connectBtn.innerText = "Đã kết nối USB ✅";
+                connectBtn.style.background = "#6c757d";
+                
+                // Chỉ mở khóa nút nạp khi đã kết nối thành công và đã tải xong file
+                if (firmwareBlob) {
+                    flashBtn.disabled = false;
+                }
+            } catch (e) {
+                log("⚠️ Bạn chưa chọn cổng USB hoặc đã hủy.");
+            }
+        };
+
+        // Bước 2: Người dùng chủ động bấm nút "Bắt đầu Nạp Firmware"
+        flashBtn.onclick = async () => {
+            if (!port || !firmwareBlob) return;
+
+            flashBtn.disabled = true;
+            connectBtn.disabled = true;
+            progressBox.style.display = "block";
+            progressFill.style.width = "0%";
+            log("⚡ Bắt đầu tiến trình nạp...");
+
+            try {
+                const transport = new Transport(port);
+                const esploader = new ESPLoader({
                     transport,
                     baudrate: 921600,
                     terminal: {
-                        clean() { logEl.innerText = ""; },
+                        clean() {},
                         writeLine: data => log(data),
                         write: data => log(data)
                     }
                 });
-                
+
+                log("🔄 Đang thiết lập giao tiếp với chip ESP32...");
                 await esploader.main();
-                log("Đã kết nối chip ESP thành công!");
-                connectBtn.innerText = "Đã kết nối USB ✅";
-                programBtn.disabled = false;
-            } catch (e) {
-                log("Lỗi kết nối: " + e.message);
-            }
-        };
+                log("✅ Chip đã phản hồi!");
 
-        programBtn.onclick = async () => {
-            try {
-                programBtn.disabled = true;
-                log("Đang tải file xiaozhi.bin từ server Render...");
-                const response = await fetch('/download-firmware');
-                const blob = await response.blob();
-                const arrayBuffer = await blob.arrayBuffer();
-
+                // Đọc dữ liệu từ blob đã tải sẵn
+                const arrayBuffer = await firmwareBlob.arrayBuffer();
                 const fileArray = [{ data: new Uint8Array(arrayBuffer), address: 0x10000 }];
 
-                log("Bắt đầu ghi dữ liệu vào Flash...");
+                log("🔥 Đang ghi dữ liệu vào Flash...");
                 await esploader.writeFlash({
                     fileArray: fileArray,
                     flashSize: "keep",
                     eraseAll: false,
                     compress: true,
+                    reportProgress: (fileIdx, written, total) => {
+                        const percent = Math.round((written / total) * 100);
+                        progressFill.style.width = percent + "%";
+                    }
                 });
-                log("🎉 Nạp firmware thành công! Hãy rút cáp hoặc nhấn Reset.");
+
+                log("🎉 NẠP THÀNH CÔNG! Đang khởi động lại thiết bị...");
+                await esploader.hardReset();
+                log("✨ Hoàn tất! Bạn có thể rút cáp.");
+
             } catch (e) {
-                log("Lỗi khi nạp: " + e.message);
-                programBtn.disabled = false;
+                log("❌ LỖI TRONG QUÁ TRÌNH NẠP: " + e.message);
+                flashBtn.disabled = false;
             }
         };
     </script>
