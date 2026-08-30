@@ -53,116 +53,6 @@
             font-size: 14px;
             margin-bottom: 20px;
         }
-        .progress-container {
-            margin: 20px 0;
-            display: none;
-        }
-        .progress-container.show {
-            display: block;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 30px;
-            background: #e9ecef;
-            border-radius: 15px;
-            overflow: hidden;
-            position: relative;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            width: 0%;
-            transition: width 0.3s ease;
-            border-radius: 15px;
-        }
-        .progress-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #333;
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .btn {
-            padding: 15px 40px;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 10px 5px;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .log-container {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            text-align: left;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
-            font-family: monospace;
-            font-size: 13px;
-            border: 1px solid #dee2e6;
-        }
-        .log-container.show {
-            display: block;
-        }
-        .log-line {
-            padding: 3px 0;
-            color: #495057;
-        }
-        .log-line.success {
-            color: #28a745;
-        }
-        .log-line.error {
-            color: #dc3545;
-        }
-        .log-line.info {
-            color: #007bff;
-        }
-        .hidden {
-            display: none;
-        }
-        .chip-info {
-            background: #f0f4ff;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-        }
-        .chip-info .label {
-            color: #666;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        .chip-info .value {
-            color: #333;
-            font-weight: 600;
-            font-size: 16px;
-        }
         .firmware-info {
             background: #fff3cd;
             padding: 15px;
@@ -174,294 +64,76 @@
             font-weight: 600;
             color: #856404;
         }
+        /* Tùy chỉnh giao diện nút nạp chuẩn của Espressif */
+        esp-web-install-button {
+            margin: 20px 0;
+            display: inline-block;
+        }
+        esp-web-install-button::part(button) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
+        }
+        esp-web-install-button::part(button):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(102, 126, 234, 0.4);
+        }
+        .not-supported {
+            background: #dc3545;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            margin-top: 15px;
+        }
     </style>
+
+    <!-- Nhúng thư viện ESP Web Tools chính thức từ Espressif -->
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
 </head>
 <body>
     <div class="container">
         <h1>⚡ ESP32 Auto Flasher</h1>
-        <p class="subtitle">Tự động phát hiện và nạp firmware</p>
+        <p class="subtitle">Tự động phát hiện và nạp firmware trực tiếp qua trình duyệt</p>
 
         <div class="status-icon" id="statusIcon">🔌</div>
-        <div class="status-text" id="statusText">Đang chờ kết nối</div>
-        <div class="status-detail" id="statusDetail">Cắm ESP32 vào USB và nhấn nút bên dưới</div>
+        <div class="status-text" id="statusText">Sẵn sàng kết nối</div>
+        <div class="status-detail" id="statusDetail">Cắm cáp USB nối ESP32 với máy tính và nhấn nút bên dưới</div>
 
         <div class="firmware-info" id="firmwareInfo">
-            <div>📦 Firmware: <span class="name" id="firmwareName">firmware.bin</span></div>
+            <div>📦 File Firmware: <span class="name">xiaozhi.bin</span></div>
             <div style="font-size:13px;color:#856404;margin-top:5px;">
-                Kích thước: <span id="firmwareSize">0 KB</span>
+                Cấu hình tự động nhận diện thiết bị chuẩn ESP32
             </div>
         </div>
 
-        <div class="chip-info">
-            <div class="label">Chip ESP32</div>
-            <div class="value" id="chipInfo">Chưa kết nối</div>
+        <!-- Nút nạp firmware tự động chuẩn Espressif -->
+        <div id="installContainer">
+            <esp-web-install-button manifest="manifest.json">
+                <button slot="activate" class="btn btn-primary">🚀 Kết nối & Nạp Firmware</button>
+            </esp-web-install-button>
         </div>
 
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-                <div class="progress-text" id="progressText">0%</div>
-            </div>
+        <div id="notSupported" class="not-supported">
+            ❌ Trình duyệt của bạn không hỗ trợ Web Serial API. Vui lòng sử dụng Google Chrome hoặc Microsoft Edge phiên bản mới nhất!
         </div>
-
-        <div>
-            <button class="btn btn-primary" id="flashBtn">
-                🚀 Nạp Firmware
-            </button>
-            <button class="btn btn-success" id="autoBtn">
-                🔄 Tự động
-            </button>
-        </div>
-
-        <div class="log-container" id="logContainer">
-            <div id="logContent"></div>
-        </div>
-
-        <button class="btn" id="toggleLogBtn" style="background:#e9ecef;color:#333;font-size:14px;padding:8px 20px;margin-top:10px;">
-            📋 Xem log
-        </button>
     </div>
 
     <script>
-        // =============================================
-        // CẤU HÌNH - THAY ĐỔI THEO FIRMWARE CỦA BẠN
-        // =============================================
-        //const FIRMWARE_URL = 'https://your-username.github.io/repo/firmware.bin';
-        // HOẶC dùng file cục bộ:
-         const FIRMWARE_URL = 'xiaozhi.bin';
-        // =============================================
-
-        let port = null;
-        let reader = null;
-        let writer = null;
-        let isFlashing = false;
-        let logLines = [];
-
-        const statusIcon = document.getElementById('statusIcon');
-        const statusText = document.getElementById('statusText');
-        const statusDetail = document.getElementById('statusDetail');
-        const flashBtn = document.getElementById('flashBtn');
-        const autoBtn = document.getElementById('autoBtn');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-        const chipInfo = document.getElementById('chipInfo');
-        const firmwareName = document.getElementById('firmwareName');
-        const firmwareSize = document.getElementById('firmwareSize');
-        const logContainer = document.getElementById('logContainer');
-        const logContent = document.getElementById('logContent');
-        const toggleLogBtn = document.getElementById('toggleLogBtn');
-
-        // Tự động kết nối khi load trang
-        window.addEventListener('load', async () => {
-            addLog('🔄 Đang khởi tạo...', 'info');
-            await autoConnect();
-        });
-
-        // Nút tự động
-        autoBtn.addEventListener('click', autoConnect);
-
-        // Nút nạp firmware
-        flashBtn.addEventListener('click', flashFirmware);
-
-        // Toggle log
-        toggleLogBtn.addEventListener('click', () => {
-            logContainer.classList.toggle('show');
-            toggleLogBtn.textContent = logContainer.classList.contains('show') ? '📋 Ẩn log' : '📋 Xem log';
-        });
-
-        // Tự động kết nối Serial
-        async function autoConnect() {
-            try {
-                setStatus('🔍', 'Đang tìm ESP32...', 'Đang quét cổng Serial...');
-                addLog('🔍 Đang tìm ESP32...', 'info');
-
-                // Yêu cầu quyền truy cập Serial
-                if ('serial' in navigator) {
-                    try {
-                        // Thử kết nối tự động
-                        port = await navigator.serial.requestPort({
-                            filters: [
-                                { usbVendorId: 0x10c4 }, // Silicon Labs
-                                { usbVendorId: 0x1a86 }, // CH340
-                                { usbVendorId: 0x0403 }  // FTDI
-                            ]
-                        });
-                        
-                        await port.open({ baudRate: 115200 });
-                        
-                        // Đọc thông tin chip
-                        await readChipInfo();
-                        
-                        setStatus('✅', 'ESP32 đã kết nối!', 'Sẵn sàng nạp firmware');
-                        flashBtn.disabled = false;
-                        addLog('✅ Kết nối ESP32 thành công!', 'success');
-                        
-                        // Tự động nạp firmware ngay
-                        setTimeout(() => flashFirmware(), 1000);
-                        
-                    } catch (err) {
-                        // Nếu không có quyền, cho phép chọn thủ công
-                        if (err.name === 'NotFoundError') {
-                            setStatus('🔌', 'Chọn cổng ESP32', 'Click vào đây để chọn cổng Serial');
-                            flashBtn.disabled = true;
-                            addLog('⚠️ Vui lòng chọn cổng Serial', 'error');
-                            
-                            // Mở dialog chọn cổng
-                            port = await navigator.serial.requestPort();
-                            await port.open({ baudRate: 115200 });
-                            await readChipInfo();
-                            setStatus('✅', 'ESP32 đã kết nối!', 'Sẵn sàng nạp firmware');
-                            flashBtn.disabled = false;
-                            addLog('✅ Kết nối ESP32 thành công!', 'success');
-                            setTimeout(() => flashFirmware(), 1000);
-                        }
-                    }
-                } else {
-                    setStatus('❌', 'Trình duyệt không hỗ trợ', 'Dùng Chrome/Edge mới nhất');
-                    addLog('❌ Trình duyệt không hỗ trợ Web Serial', 'error');
-                }
-            } catch (error) {
-                setStatus('❌', 'Lỗi kết nối', error.message);
-                addLog('❌ Lỗi: ' + error.message, 'error');
-                flashBtn.disabled = true;
-            }
-        }
-
-        // Đọc thông tin chip
-        async function readChipInfo() {
-            try {
-                const textEncoder = new TextEncoder();
-                const textDecoder = new TextDecoder();
-                writer = port.writable.getWriter();
-                reader = port.readable.getReader();
-
-                // Gửi lệnh đọc chip ID
-                await writer.write(textEncoder.encode('\n'));
-                await writer.write(textEncoder.encode('ESP32 Chip Info\n'));
-                
-                // Đọc phản hồi
-                let response = '';
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    response += textDecoder.decode(value);
-                    if (response.includes('ESP32')) break;
-                }
-                
-                chipInfo.textContent = response.trim() || 'ESP32 Detected';
-                addLog('📡 Chip: ' + response.trim(), 'info');
-                
-            } catch (error) {
-                chipInfo.textContent = 'ESP32 (không đọc được chi tiết)';
-            }
-        }
-
-        // Nạp firmware
-        async function flashFirmware() {
-            if (isFlashing) return;
-            if (!port) {
-                setStatus('❌', 'Chưa kết nối ESP32', 'Vui lòng kết nối trước');
-                return;
-            }
-
-            isFlashing = true;
-            flashBtn.disabled = true;
-            progressContainer.classList.add('show');
-            setStatus('⏳', 'Đang nạp firmware...', 'Vui lòng đợi');
-
-            try {
-                // Tải firmware
-                addLog('📥 Đang tải firmware...', 'info');
-                const response = await fetch(FIRMWARE_URL);
-                if (!response.ok) throw new Error('Không thể tải firmware');
-                
-                const firmwareData = await response.arrayBuffer();
-                const totalSize = firmwareData.byteLength;
-                const chunkSize = 1024;
-                let uploaded = 0;
-
-                firmwareName.textContent = FIRMWARE_URL.split('/').pop();
-                firmwareSize.textContent = (totalSize / 1024).toFixed(2) + ' KB';
-                
-                addLog('📦 Firmware: ' + (totalSize / 1024).toFixed(2) + ' KB', 'info');
-
-                // Gửi firmware qua Serial
-                const textEncoder = new TextEncoder();
-                const data = new Uint8Array(firmwareData);
-
-                setStatus('📤', 'Đang gửi dữ liệu...', '0%');
-                
-                // Gửi từng chunk
-                for (let i = 0; i < data.length; i += chunkSize) {
-                    const chunk = data.slice(i, Math.min(i + chunkSize, data.length));
-                    await writer.write(chunk);
-                    
-                    uploaded += chunk.length;
-                    const percent = Math.round((uploaded / totalSize) * 100);
-                    updateProgress(percent);
-                    
-                    if (percent % 10 === 0) {
-                        addLog(`⏳ Đã gửi ${percent}%...`, 'info');
-                    }
-                }
-
-                // Gửi lệnh reset ESP32
-                await writer.write(textEncoder.encode('\n'));
-                await writer.write(textEncoder.encode('ESP.restart();\n'));
-
-                setStatus('✅', 'Nạp firmware thành công!', 'ESP32 đang khởi động lại');
-                addLog('✅ Nạp firmware thành công! ESP32 đang reset...', 'success');
-                updateProgress(100);
-
-                // Đóng kết nối
-                await reader.cancel();
-                await writer.close();
-                await port.close();
-
-                setTimeout(() => {
-                    setStatus('🔄', 'ESP32 đã khởi động lại', 'Sẵn sàng với firmware mới');
-                    flashBtn.disabled = false;
-                    isFlashing = false;
-                }, 3000);
-
-            } catch (error) {
-                setStatus('❌', 'Lỗi nạp firmware', error.message);
-                addLog('❌ Lỗi: ' + error.message, 'error');
-                flashBtn.disabled = false;
-                isFlashing = false;
-                updateProgress(0);
-            }
-        }
-
-        // Cập nhật progress
-        function updateProgress(percent) {
-            progressFill.style.width = percent + '%';
-            progressText.textContent = percent + '%';
-        }
-
-        // Set status
-        function setStatus(icon, text, detail) {
-            statusIcon.textContent = icon;
-            statusText.textContent = text;
-            statusDetail.textContent = detail || '';
-        }
-
-        // Thêm log
-        function addLog(message, type = 'info') {
-            const time = new Date().toLocaleTimeString();
-            const logLine = document.createElement('div');
-            logLine.className = 'log-line ' + type;
-            logLine.textContent = `[${time}] ${message}`;
-            logContent.appendChild(logLine);
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-
-        // Hỗ trợ nếu trình duyệt không có Web Serial
+        // Kiểm tra trình duyệt hỗ trợ Web Serial API
         if (!('serial' in navigator)) {
-            setStatus('❌', 'Trình duyệt không hỗ trợ', 'Vui lòng dùng Chrome/Edge');
-            flashBtn.disabled = true;
-            autoBtn.disabled = true;
+            document.getElementById('installContainer').style.display = 'none';
+            document.getElementById('notSupported').style.display = 'block';
+            document.getElementById('statusIcon').textContent = '❌';
+            document.getElementById('statusText').textContent = 'Trình duyệt không hỗ trợ';
+            document.getElementById('statusDetail').textContent = 'Hãy mở trang này bằng Chrome hoặc Edge';
         }
     </script>
 </body>
