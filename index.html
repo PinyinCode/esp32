@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Web Flasher & OTA Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; }
+        button { width: 100%; padding: 12px; font-size: 16px; margin: 10px 0; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        button.flash { background: #28a745; }
+        pre { text-align: left; background: #1e1e1e; color: #00ff00; padding: 12px; border-radius: 5px; height: 180px; overflow-y: auto; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Nạp Firmware ESP32</h2>
+        <p>Cắm cáp USB và chọn kết nối:</p>
+        <button id="connectBtn">🔌 Kết nối cổng USB</button>
+        <button id="programBtn" class="flash" disabled>🚀 Nạp file xiaozhi.bin</button>
+        <br>
+        <pre id="log">Nhật ký trạng thái sẽ hiện ở đây...</pre>
+    </div>
+
+    <script type="module">
+        import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.2/bundle.js";
+
+        let port;
+        let transport;
+        let esploader;
+
+        const connectBtn = document.getElementById('connectBtn');
+        const programBtn = document.getElementById('programBtn');
+        const logEl = document.getElementById('log');
+
+        function log(text) {
+            logEl.innerText += text + "\n";
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        connectBtn.onclick = async () => {
+            try {
+                port = await navigator.serial.requestPort();
+                transport = new Transport(port);
+                esploader = new ESPLoader({
+                    transport,
+                    baudrate: 921600,
+                    terminal: {
+                        clean() { logEl.innerText = ""; },
+                        writeLine: data => log(data),
+                        write: data => log(data)
+                    }
+                });
+                
+                await esploader.main();
+                log("Đã kết nối chip ESP thành công!");
+                connectBtn.innerText = "Đã kết nối USB ✅";
+                programBtn.disabled = false;
+            } catch (e) {
+                log("Lỗi kết nối: " + e.message);
+            }
+        };
+
+        programBtn.onclick = async () => {
+            try {
+                programBtn.disabled = true;
+                log("Đang tải file xiaozhi.bin từ server Render...");
+                const response = await fetch('/download-firmware');
+                const blob = await response.blob();
+                const arrayBuffer = await blob.arrayBuffer();
+
+                const fileArray = [{ data: new Uint8Array(arrayBuffer), address: 0x10000 }];
+
+                log("Bắt đầu ghi dữ liệu vào Flash...");
+                await esploader.writeFlash({
+                    fileArray: fileArray,
+                    flashSize: "keep",
+                    eraseAll: false,
+                    compress: true,
+                });
+                log("🎉 Nạp firmware thành công! Hãy rút cáp hoặc nhấn Reset.");
+            } catch (e) {
+                log("Lỗi khi nạp: " + e.message);
+                programBtn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
