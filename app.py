@@ -15,7 +15,7 @@ def home():
 # API kiểm tra cập nhật OTA cho ESP32
 @app.route("/api/check-update", methods=["GET"])
 def check_update():
-  print(f"Thiết bị MAC {request.args.get('mac', 'unknown')} đang kiểm tra OTA...")
+  print(f"Thiết bị Chip ID {request.args.get('chip_id', 'unknown')} đang kiểm tra OTA...")
   return jsonify({
       "update_available": True,
       "firmware_url": f"{request.host_url.rstrip('/')}/download-firmware",
